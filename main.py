@@ -1,9 +1,10 @@
 import numpy as np
 import math
 import random as rm
+import matplotlib.pyplot as plt
 
 alfa = 1.0
-norma = 5  #скорость обучения
+norma = 0.1  #скорость обучения
 
 # Активационная функция
 def sigmoid(s):
@@ -12,6 +13,14 @@ def sigmoid(s):
 # Первая производная активационной функции (для обратного распределения ошибки)
 def sigmoid1(s):
     return sigmoid(s)*(1-sigmoid(s))
+
+# список для ошибок, чтобы построить график
+errors = []
+
+# пороговое значение ошибки
+epsilon = 0.2
+
+eras = int(input('Введите максимальное количество обучающих эпох: '))
 
 # Заполняем обучающую выборку, массив с эталонными значениями
 # Столбцы: [bias, X1, X2, X3, X4, y1]
@@ -31,7 +40,7 @@ for i1 in range(2):
                 massiv[j,4] = i4
                 massiv[j,5] = ((massiv[j,1]) and (massiv[j,2])) != ((massiv[j,3]) or (massiv[j,4]))  # результат функции
 
-print(massiv)
+print('Обучающая выборка:\n', massiv)
 # Заполняем массив с весовыми коэффициентами нейронов (1 строка - 1 нейрон, число входов + bias)
 arrw = np.zeros((3,5)) # 3 - два скрытых + один выходной
 for i1 in range(3):
@@ -42,9 +51,11 @@ for i1 in range(3):
 y = np.zeros((3)) # активация нейронов скрытого слоя (bias + 4 входа)
 y[0] = 1
 
-print('arrw1', arrw)
+print('Матрица весовых коэффициентов\n', arrw)
 
-for k in range(2000):
+k = 0
+while k < eras:
+    k += 1
     for i in range(16): #каждый пример из массива комбинаций
         # скрытые нейроны
         s1 = 0
@@ -69,7 +80,6 @@ for k in range(2000):
         #вычисление ошибки (дельты)
         delta = massiv[i,5] - y3
         
-        print('delta', delta)
 
         # находим производную от суммы выходного нейрона (насколько нейрон чувствителен к изменениям своей суммы) 
         # и умножаем на дельту, потому что:
@@ -99,12 +109,38 @@ for k in range(2000):
         
         for j in range(5):
             arrw[1,j] = arrw[1,j] + norma*delta2*massiv[i,j]
+    
+    # подсчёт квадратичной ошибки на каждой эпохе (отдельный проход)
+    epoch_error = 0
+    for i in range(16):
+        s1 = 0
+        s2 = 0
+        for j in range(5):
+            s1 += arrw[0, j] * massiv[i, j]
+            s2 += arrw[1, j] * massiv[i, j]
+
+        y[1] = sigmoid(s1)
+        y[2] = sigmoid(s2)
+
+        s3 = 0
+        for j in range(3):
+            s3 += y[j] * arrw[2, j]
+
+        y3 = sigmoid(s3)
+        delta = massiv[i, 5] - y3
+        epoch_error += delta * delta
+
+    epoch_error = math.sqrt(epoch_error / 16)
+    errors.append(epoch_error)
+    if epoch_error <= epsilon:
+        break
         
 
-# Подсчёт погрешности
-epsilon = 0
+# Подсчёт погрешности и вывод результативной матрицы
+
 summa = 0
 
+print('Итоговая матрица: \nX1 X2 X3 X4 y d')
 for i in range(16):
     s1 = 0
     s2 = 0
@@ -132,9 +168,20 @@ for i in range(16):
     x2 = int(massiv[i, 2])
     x3 = int(massiv[i, 3])
     x4 = int(massiv[i, 4])
-    print(f"{x1}  {x2}  {x3}  {x4}")
+    Y = int(massiv[i, 5])
+    d = int(round(y3, 0))
+    print(f"{x1}  {x2}  {x3}  {x4}  {Y} {d}")
 
 
 summa = math.sqrt(summa/16)
 
-print(summa)
+print('Средняя квадратичная ошибка', summa)
+
+# построение графика
+plt.figure()
+plt.plot(errors)
+plt.xlabel('Эпоха')
+plt.ylabel('Среднеквадратичная ошибка')
+plt.title('Сходимость обучения персептрона')
+plt.grid(True)
+plt.show()
